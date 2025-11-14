@@ -1,7 +1,7 @@
 # 📊 Sentinel & MDE Telemetry Matrix  
 ### Comprehensive SOC Telemetry, Pivoting & Detection Reference
 
-This repository is a **SOC telemetry bible** for:
+This repository is a **SOC telemetry bible** for: (Beginners-Intermediate) 
 
 - **Microsoft Sentinel** (Log Analytics + connected data sources)
 - **Microsoft Defender for Endpoint (MDE) / Defender XDR** hunting tables
