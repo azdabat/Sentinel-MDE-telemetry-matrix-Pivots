@@ -1,4 +1,4 @@
-# 📊 Zero-Day Sentinel & MDE Telemetry Matrix
+# Sentinel & MDE Telemetry Matrix
 
 **Author:** Alstrum (Ala Dabat)  
 **Project:** Zero-Day – Advanced Detection & Threat Hunting
