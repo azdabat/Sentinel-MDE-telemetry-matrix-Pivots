@@ -1,54 +1,51 @@
-#  Zero-Day Sentinel & MDE Telemetry Matrix
+#  Sentinel & MDE Telemetry Matrix  
+### Comprehensive SOC Telemetry, Pivoting & Detection Reference
 
-**Author:** Alstrum (Ala Dabat)  
-**Project:** Zero-Day – Advanced Detection & Threat Hunting
+This repository provides a complete, GitHub-ready reference for every major telemetry source used in:
+- Microsoft Sentinel
+- Microsoft Defender for Endpoint (MDE)
 
-![Zero-Day Telemetry Banner](assets/banner.png)
-
-> Know your tables. Know your pivots. Build better detections.
-
-This repository is a **SOC reference** for:
-
-- Microsoft Sentinel core tables (endpoint, identity, cloud, network)
-- Microsoft Defender for Endpoint (MDE) hunting tables
-- Their **purpose**, **key fields**, **common attacks detected**, and **pivot ideas**
+It includes:
+- Wide GitHub-friendly tables  
+- Pivoting logic  
+- Key investigative fields  
+- MITRE mappings  
+- KQL examples  
 
 Designed for:
-
-- SOC analysts (L1–L3)
-- Threat hunters
-- Detection engineers and IR
-
----
-
-## 📂 Contents
-
-- [`matrices/sentinel_tables.md`](matrices/sentinel_tables.md)  
-  **What:** Sentinel-side table matrix – DeviceProcessEvents, DeviceNetworkEvents, DeviceFileEvents, DeviceRegistryEvents, SecurityEvent, SigninLogs, AuditLogs, OfficeActivity, AzureActivity, CommonSecurityLog, ThreatIntelligenceIndicator.  
-  **Why:** Helps analysts know “which table do I query for X?” and “how do I pivot from this event?”
-
-- [`matrices/mde_tables.md`](matrices/mde_tables.md)  
-  **What:** MDE advanced hunting table matrix – DeviceInfo, DeviceProcessEvents, DeviceNetworkEvents, DeviceFileEvents, DeviceRegistryEvents, DeviceLogonEvents, DeviceEvents, AlertInfo, AlertEvidence.  
-  **Why:** Shows how to move from alerts → entities → raw telemetry for investigation.
+- SOC Analysts  
+- Threat Hunters  
+- Detection Engineers  
+- Incident Responders  
 
 ---
 
-## 🧬 How to Use
+# 📁 Repository Structure
 
-1. **During triage:** Start with AlertInfo/AlertEvidence → identify entities.
-2. **During hunting:** Pick an attack type (e.g. Kerberoasting, OAuth abuse, RDP brute) and see which tables are best for it.
-3. **During detection engineering:** Use “Key Fields” + “Pivots” sections to design efficient KQL.
-
----
-
-## 🔗 Related Repos
-
-- Process & LOLBin Ancestry Matrix (parent-child baselining)
-- Attack Technique → KQL Playbook
+| Path | Description |
+|------|-------------|
+| `matrices/sentinel_tables.md` | All Sentinel tables with fields, use-cases, pivots, KQL |
+| `matrices/mde_tables.md` | Full MDE advanced hunting table matrix |
+| `matrices/mitre-mapping.md` | MITRE ATT&CK mappings for all telemetry sources |
+| `matrices/pivot_index.md` | “Which table do I use for X?” quick-pivot reference |
+| `kql/examples.md` | General KQL example queries |
 
 ---
 
-## 👤 About
+# 🧭 How to Use This Repo
 
-Part of the **Zero-Day** project by **Alstrum (Ala Dabat)**.  
-Built as a practical, field-driven reference for real SOC work.
+| Purpose | How |
+|---------|-----|
+| Triage Alerts | Use `pivot_index.md` |
+| Build Detections | Check “Attack Coverage” per table |
+| Threat Hunting | Start from KQL examples in each section |
+| MITRE Alignment | Use `mitre-mapping.md` |
+| SOC Training | Treat as your telemetry encyclopedia |
+
+---
+
+# 👤 Author
+
+**Alstrum (Ala Dabat)**  
+Senior Cyber Security Analyst — IR, Detection Engineering, Threat Hunting
+
