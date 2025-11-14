@@ -1,4 +1,4 @@
-# 🧱 Sentinel ASIM Normalized Tables
+#  Sentinel ASIM Normalized Tables
 
 ASIM (Advanced Security Information Model) normalizes data from many products into consistent schemas.
 
