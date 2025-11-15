@@ -37,7 +37,7 @@ leftanti: keep left rows where NO match in right
 
 1. EMAIL → URL CLICK → DEVICE RISK
 1.1 Tables & Keys
-
+```
 ┌────────────────────────┐
 │      EmailEvents       │
 │────────────────────────│
@@ -72,7 +72,7 @@ leftanti: keep left rows where NO match in right
 │ RiskScore              │
 │ OnboardingStatus       │
 └────────────────────────┘
-
+```
 Join chain:
 
 EmailEvents → UrlClickEvents on NetworkMessageId
