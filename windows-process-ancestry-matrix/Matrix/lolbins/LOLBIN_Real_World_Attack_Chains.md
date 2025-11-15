@@ -27,7 +27,7 @@ Use this document to guide:
 outlook.exe
 
 
-  └─ winword.exe (macro-enabled doc)
+`  └─ winword.exe (macro-enabled doc)`
   
        └─ powershell.exe (encoded stager)
        
@@ -62,7 +62,7 @@ DeviceFileEvents: loader/temp EXE writes
 
 outlook.exe / browser.exe
 
-  └─ mshta.exe (remote .hta or javascript:/vbscript:)
+ ` └─ mshta.exe (remote .hta or javascript:/vbscript:)`
   
        └─ powershell.exe (download cradle)
             └─ decode → unpack → payload.exe
@@ -92,8 +92,8 @@ DeviceFileEvents: dropped payloads in %TEMP%
 # Chain 3 — Script Dropper → WScript/CScript → PowerShell → Scheduled Task
 outlook.exe
 
-  └─ winword.exe
-  
+`  └─ winword.exe`
+
        └─ wscript.exe (malicious VBS/JS)
             └─ powershell.exe (stager)
                  └─ schtasks.exe /create (persistence)
