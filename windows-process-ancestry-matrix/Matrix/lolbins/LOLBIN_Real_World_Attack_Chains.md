@@ -25,10 +25,15 @@ Use this document to guide:
 
 # Chain 1 — Phishing Doc → Macro → PowerShell Loader → C2
 outlook.exe
+
   └─ winword.exe (macro-enabled doc)
+  
        └─ powershell.exe (encoded stager)
+       
             └─ loader.ps1 (download/decrypt)
+            
                  └─ payload.exe
+                 
                       └─ C2 beacons / recon / credential theft
 
 
