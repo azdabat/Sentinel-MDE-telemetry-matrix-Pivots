@@ -90,14 +90,15 @@ DeviceFileEvents: dropped payloads in %TEMP%
 
 
 # Chain 3 — Script Dropper → WScript/CScript → PowerShell → Scheduled Task
-`outlook.exe
-└─ winword.exe
+`outlook.exe`
+
+`└─ winword.exe
        └─ wscript.exe (malicious VBS/JS)
             └─ powershell.exe (stager)
                  └─ schtasks.exe /create (persistence)
                       └─ payload.exe runs on schedule
                            └─ C2 + privilege escalation`
-
+`
 
 Context / Reasoning
 
