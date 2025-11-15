@@ -62,12 +62,12 @@ DeviceFileEvents: loader/temp EXE writes
 
 outlook.exe / browser.exe
 
- ` └─ mshta.exe (remote .hta or javascript:/vbscript:)`
-  
+`  └─ mshta.exe (remote .hta or javascript:/vbscript:)`
+ 
        └─ powershell.exe (download cradle)
             └─ decode → unpack → payload.exe
                  └─ persistence (registry/scheduled task)
-                      └─ C2 over HTTPS
+                      └─ C2 over HTTPS`
 
 
 Context / Reasoning
