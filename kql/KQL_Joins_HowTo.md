@@ -165,7 +165,7 @@ ThreatIntelligenceIndicators from platforms like MISP can join on any value it f
 Goal: catch legit EXEs loading DLLs from user-writable paths that match or resemble TI.
 
 2.1 Tables & Keys
-
+```
 ┌────────────────────────────┐
 │    DeviceProcessEvents     │
 │────────────────────────────│
@@ -198,7 +198,7 @@ Goal: catch legit EXEs loading DLLs from user-writable paths that match or resem
 │ SourceSystem               │
 │ TimeGenerated              │
 └────────────────────────────┘
-
+```
 IOC-based Joining: In security operations, the ThreatIntelligenceIndicator table is specifically designed to hold Indicators of Compromise (IOCs) such as IP addresses, domain names, URLs, and file hashes.
 Which is why there is no PK, FK relationship in this diagram, which may be slighly confusing at first.
 
@@ -287,7 +287,7 @@ DeviceImageLoadEvents → DeviceProcessEvents on DeviceId+ProcessId
 Goal: capture suspicious LOLBin process trees (e.g. winword.exe → powershell.exe → certutil.exe) and pivot to network & file activity.
 
 3.1 Logical model
-
+```
 ┌────────────────────────────┐
 │    DeviceProcessEvents     │
 │────────────────────────────│
@@ -321,7 +321,7 @@ Goal: capture suspicious LOLBin process trees (e.g. winword.exe → powershell.e
 │ ActionType                 │
 │ Timestamp                  │
 └────────────────────────────┘
-
+```
 3.2 Define LOLBins for this chain
 ```
 let Lookback = 7d;
@@ -434,7 +434,7 @@ winword.exe (user opened malicious doc)
 
 SOC Telemetry Chain (Process + File + Network Joins)
 This shows exactly how events join together across tables in MDE/Sentinel.
-
+```
 ┌────────────────────────────────────────────────────────────────────┐
 │                          DeviceProcessEvents                       │
 │────────────────────────────────────────────────────────────────────│
@@ -467,7 +467,7 @@ This shows exactly how events join together across tables in MDE/Sentinel.
 │     RemoteIP  = 185.193.xx.xx                                      │
 │     RemotePort = 80 / 443                                          │
 └────────────────────────────────────────────────────────────────────┘
-
+```
 COMBINED VIEW (after all joins):
 ----------------------------------------------------------------------
 User opened malicious doc → WinWord spawned PowerShell  
@@ -478,7 +478,7 @@ payload.exe executed → established outbound C2
 EASY PEASY! Once you understand the fundimentals you can then start to use AI to make your life easier. But it's important you understand the code you are generating.
 
 SOC Investigation Flow (ASCII “flow arrow” format)
-
+```
 [Email → Doc] 
       │
       ▼
@@ -496,7 +496,7 @@ payload.exe
       │
       └── DeviceNetworkEvents: C2 beacon (HTTPS)
 
-
+```
 4. ADVANCED JOIN PATTERNS & DEBUGGING
 4.1 Fan-out: many-to-many explosion
 
