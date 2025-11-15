@@ -1,5 +1,18 @@
 # Behavioural Attack Chains (Comprehensive SOC/DFIR Reference)
 
+└─ outlook.exe
+   └─ winword.exe
+      └─ wscript.exe (malicious VBS/JS)
+         └─ powershell.exe (stager)
+            └─ schtasks.exe /create (persistence)
+               └─ payload.exe runs on schedule
+                  └─ C2 + privilege escalation
+
+└─ powershell.exe (download cradle)
+   └─ decode → unpack → payload.exe
+      └─ persistence (registry/scheduled task)
+         └─ C2 over HTTPS
+
 This document provides a complete set of **realistic, high-fidelity attack chains** covering the most common and most dangerous intrusion paths seen in SOC and Incident Response environments.
 
 Each chain includes:
