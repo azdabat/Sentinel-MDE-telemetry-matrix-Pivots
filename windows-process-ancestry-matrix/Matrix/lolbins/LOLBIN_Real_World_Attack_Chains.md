@@ -26,6 +26,7 @@ Use this document to guide:
 # Chain 1 — Phishing Doc → Macro → PowerShell Loader → C2
 outlook.exe
 
+
   └─ winword.exe (macro-enabled doc)
   
        └─ powershell.exe (encoded stager)
@@ -58,8 +59,11 @@ DeviceFileEvents: loader/temp EXE writes
 
 
 # Chain 2 — HTML Smuggling → MSHTA → PowerShell → Payload
+
 outlook.exe / browser.exe
+
   └─ mshta.exe (remote .hta or javascript:/vbscript:)
+  
        └─ powershell.exe (download cradle)
             └─ decode → unpack → payload.exe
                  └─ persistence (registry/scheduled task)
@@ -87,7 +91,9 @@ DeviceFileEvents: dropped payloads in %TEMP%
 
 # Chain 3 — Script Dropper → WScript/CScript → PowerShell → Scheduled Task
 outlook.exe
+
   └─ winword.exe
+  
        └─ wscript.exe (malicious VBS/JS)
             └─ powershell.exe (stager)
                  └─ schtasks.exe /create (persistence)
