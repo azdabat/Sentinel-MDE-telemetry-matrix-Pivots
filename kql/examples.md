@@ -75,3 +75,5 @@ DeviceProcessEvents
 | where FileName in~ ("cmd.exe","powershell.exe","bash")
 | project Timestamp, DeviceName, ParentProcessName, FileName, ProcessCommandLine, AccountName
 | order by Timestamp desc
+
+SEE: THREATH-HUNTING Section for ready to use complete rules.
