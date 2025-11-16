@@ -1,10 +1,10 @@
-# 🛰️ Ultimate SOC Table Guide – Microsoft 365 Defender & Sentinel
+# Ultimate SOC Table Guide – Microsoft 365 Defender & Sentinel
 ### L2–L3 Threat Hunting & Incident Response Reference
 Hybrid Professional + Hacker Aesthetic • Endpoint • Identity • Email • Cloud • Alerts
 
 ---
 
-## 📘 Contents
+##  Contents
 
 1. Investigation Flowchart (Any Intrusion)
 2. Unified MITRE ATT&CK Coverage Matrix
