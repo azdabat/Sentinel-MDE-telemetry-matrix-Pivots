@@ -2,6 +2,9 @@
 
 These are generic starter queries you can adapt into hunts or detections.
 
+### 📚 Additional Materials  
+**Complete rule sets are available here:**  
+👉 https://github.com/azdabat/Threat-Hunting-Rules
 ---
 
 ## 1. Suspicious PowerShell with Encoded or Download Behaviour
